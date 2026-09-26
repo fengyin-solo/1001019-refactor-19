@@ -4,6 +4,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.store import store
+from app.services.slope_warning import warning_view
 
 MODULE = "geom"
 REQUIRED_FIELDS = ["边坡编号", "所属路段", "边坡类型"]
@@ -28,10 +29,13 @@ class GeomService:
             rows = [row for row in rows if row.get("status") == status]
         total = len(rows)
         start = max(page - 1, 0) * size
-        return rows[start:start + size], total
+        page_rows = rows[start:start + size]
+        # 预警结论统一走 slope_warning，列表与详情共用同一份判断
+        return [warning_view(row) for row in page_rows], total
 
     def get_entry(self, entry_id: int) -> dict[str, Any] | None:
-        return store.find(MODULE, entry_id)
+        entry = store.find(MODULE, entry_id)
+        return warning_view(entry) if entry is not None else None
 
     def create_entry(self, values: dict[str, Any]) -> tuple[dict[str, Any] | None, list[str]]:
         missing = [field for field in REQUIRED_FIELDS if not str(values.get(field) or "").strip()]
